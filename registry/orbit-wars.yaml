@@ -1,0 +1,76 @@
+schema_version: 1
+competition: orbit-wars
+# `head` is the last ingested commit, not a live remote-head claim.
+
+repositories:
+  - rank: 1
+    author: Isaiah Pressman
+    team: Isaiah @ Tufa Labs
+    local_path: sources/repos/isaiahpressman--kaggle-orbit-wars
+    remote: https://github.com/IsaiahPressman/kaggle-orbit-wars.git
+    branch: main
+    head: dd9fc47450ff2726eb9800df1ce841b69c77bf83
+    state: clean
+  - rank: 2
+    author: SimJeg
+    team: Hober Malloc
+    local_path: sources/repos/simjeg--orbit-wars
+    remote: https://github.com/SimJeg/orbit-wars.git
+    branch: main
+    head: f7d06accd74598763d764dab68e27eea10bd6cfd
+    state: clean
+  - rank: 5
+    author: Tony Kozlovsky
+    team: TonyK
+    local_path: sources/repos/tonykozlovsky--orbit-wars-2026-pub
+    remote: https://github.com/tonykozlovsky/orbit-wars-2026-pub.git
+    branch: main
+    head: c386f7af3d2ef8fe5112ebd82ce210c95b637c05
+    state: clean
+  - rank: 6
+    author: flg
+    team: flg
+    local_path: sources/repos/lefiz--orbitwars-ppo
+    remote: https://github.com/LeFiz/OrbitWars_PPO.git
+    branch: main
+    head: 668a7a2aae589edcf3cc7cb46621019ef953d4d9
+    state: clean
+  - rank: 8
+    author: Billy Bradley
+    team: Ender
+    local_path: sources/repos/sinking-point--ender
+    remote: https://github.com/sinking-point/ender.git
+    branch: master
+    head: f00845525c475121b19f4444185fa7d116c81058
+    state: clean
+
+writeups:
+  - rank: 1
+    local_path: sources/writeups/orbit-wars/01-isaiah-pressman
+    capture: writeup.md
+  - rank: 2
+    local_path: sources/writeups/orbit-wars/02-simjeg-hober-malloc
+    capture: writeup.md
+  - rank: 3
+    local_path: sources/writeups/orbit-wars/03-felix-neumann
+    capture: writeup.md
+  - rank: 4
+    local_path: sources/writeups/orbit-wars/04-jake-will
+    capture: writeup.md
+  - rank: 5
+    local_path: sources/writeups/orbit-wars/05-tonyk
+    capture: writeup.md
+  - rank: 6
+    local_path: sources/writeups/orbit-wars/06-flg
+    capture: writeup.md
+    code_repository: https://github.com/LeFiz/OrbitWars_PPO
+    code_local_path: sources/repos/lefiz--orbitwars-ppo
+    code_branch: main
+    code_head: 668a7a2aae589edcf3cc7cb46621019ef953d4d9
+    code_state: clean
+  - rank: 7
+    local_path: sources/writeups/orbit-wars/07-audun-ljone-henriksen
+    capture: writeup.md
+  - rank: 8
+    local_path: sources/writeups/orbit-wars/08-ender
+    capture: writeup.md

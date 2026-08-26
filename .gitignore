@@ -1,0 +1,7 @@
+vault/
+sources/
+.knowledgeos/
+vault/.obsidian/
+*.txt
+*.token
+.DS_Store

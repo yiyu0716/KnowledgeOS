@@ -1,0 +1,5 @@
+schema_version: 1
+
+# One entry is added after a real repository has been cloned into sources/repos/.
+# Keep repository metadata separate from generated Markdown knowledge.
+repositories: []
