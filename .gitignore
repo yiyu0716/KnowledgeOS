@@ -4,4 +4,4 @@ sources/
 vault/.obsidian/
 *.txt
 *.token
-.DS_Store
+.pi/
