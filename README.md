@@ -151,24 +151,42 @@ python3 tools/knowledgeos.py maintain
 python3 tools/knowledgeos.py rebuild
 ```
 
-Optional Hybrid Vector Search V1 can be enabled in `knowledge-config.yaml`:
+## Environment / 环境
+
+**Required / 必备**
+
+- Python 3.9+（推荐 3.11+）
+- Git（使用 `maintain` 检查 repository 时需要）
+
+**Optional / 可选**
+
+- Obsidian：用于 Markdown、Project Map 和 Knowledge Graph 的可视化。
+- Ollama + `qwen3-embedding:0.6b`：启用本地 Vector Search。
+
+## Configuration / 可选配置
+
+默认只使用 BM25。需要 Vector Search 时，在 `knowledge-config.yaml` 中设置：
 
 ```yaml
 vector: true
-model: Qwen/Qwen3-Embedding-0.6B
-dimension: 512
+provider: ollama
+model: qwen3-embedding:0.6b
+endpoint: http://localhost:11434
+dimension: 1024
 top_k: 20
 ```
 
-It uses local `sentence-transformers` when installed. Search fuses BM25 Top 20 and Vector Top 20 with RRF, then applies a small Learning boost. If the feature is disabled, dependencies are missing, the model cannot load, or the index is absent, search falls back to BM25-only. Vector data is derived state under `.knowledgeos/` and never changes Markdown or provenance.
+Ollama 不可用时，Search 会自动回退到 BM25；Vector index 属于 `.knowledgeos/` 下的可重建派生状态。
+
+
+默认生成语言配置为：
 
 ```yaml
 output_style: zh_en_terms
 ```
 
-Supported styles are `english` and `zh_en_terms`. The setting changes presentation only, never knowledge semantics, graph relations, or provenance.
+支持 `english` 和 `zh_en_terms`。
 
-## Design Principles / 设计原则
 
 ```text
 Simple by default.
