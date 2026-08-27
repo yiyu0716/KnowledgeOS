@@ -1,5 +1,7 @@
 # KnowledgeOS
 
+**Version:** 0.1.0
+
 > **KnowledgeOS turns real projects into reusable knowledge: from evidence, to mechanisms, to principles, to better decisions on the next problem.**
 >
 > **KnowledgeOS 将真实项目转化为可复用知识：从证据出发，理解机制，提炼原则，再把过去的经验用于下一个问题。**
@@ -182,4 +184,4 @@ Composable.
 
 ## License
 
-No license has been selected yet.
+KnowledgeOS is dual-licensed under either the [MIT License](LICENSE-MIT) or the [Apache License 2.0](LICENSE-APACHE), at your option.
