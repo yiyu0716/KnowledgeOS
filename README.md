@@ -149,7 +149,16 @@ python3 tools/knowledgeos.py maintain
 python3 tools/knowledgeos.py rebuild
 ```
 
-Configure Human-facing generation in `knowledge-config.yaml`:
+Optional Hybrid Vector Search V1 can be enabled in `knowledge-config.yaml`:
+
+```yaml
+vector: true
+model: Qwen/Qwen3-Embedding-0.6B
+dimension: 512
+top_k: 20
+```
+
+It uses local `sentence-transformers` when installed. Search fuses BM25 Top 20 and Vector Top 20 with RRF, then applies a small Learning boost. If the feature is disabled, dependencies are missing, the model cannot load, or the index is absent, search falls back to BM25-only. Vector data is derived state under `.knowledgeos/` and never changes Markdown or provenance.
 
 ```yaml
 output_style: zh_en_terms
@@ -170,12 +179,6 @@ Composable.
 ```
 
 简单优先、真实证据、多对多关系、正文为人服务、证据随时可追溯、索引全部可重建、功能保持可组合。
-
-## Public Repository Boundary / 公开仓库边界
-
-This repository contains the reusable KnowledgeOS design, deterministic tooling, schemas, Skills, and tests. Personal vault notes, raw source collections, cloned repositories, derived indexes, and credentials are intentionally excluded from the public repository.
-
-本仓库只公开可复用的 KnowledgeOS 设计、确定性工具、schema、Skills 和测试。个人 vault 笔记、原始资料、克隆仓库、派生索引和凭证会被明确排除。
 
 ## License
 
