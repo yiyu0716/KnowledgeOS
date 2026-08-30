@@ -151,6 +151,8 @@ The workflows are reasoning protocols, not separate data models. Deterministic o
 
 ## Architecture / 架构
 
+![KnowledgeOS research pipeline](knowledgeos-pipeline.png)
+
 ```text
                  Agent Skills
         search / summarize / compare / maintain
