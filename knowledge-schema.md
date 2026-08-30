@@ -228,6 +228,8 @@ superseded_by: optional claim_id
 
 Claim currentness is semantic lifecycle metadata, not file modification time.
 
+`claims.yaml` is not independently authored knowledge. When present, it is generated from the latest active verified canonical `solution-space` run and carries run/hash metadata. A newer canonical finalization makes an older ledger stale even if its timestamp is recent; manual content edits make it drift. Absence is preferable to a stale ledger.
+
 ## Rebuildability
 
 Indexes, Research Runs, caches, Graph/Vector/BM25 state, and lint reports belong in `.knowledgeos/`. Deleting `.knowledgeos/` must never delete durable knowledge, Evidence, registry identity, or the tools required to rebuild them.

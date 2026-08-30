@@ -1,6 +1,6 @@
 # KnowledgeOS
 
-**Version:** 0.2.0
+**Version:** 0.2.1
 
 > **KnowledgeOS turns real projects into reusable knowledge: from evidence, to mechanisms, to principles, to better decisions on the next problem.**
 >

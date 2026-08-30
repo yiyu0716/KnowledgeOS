@@ -51,7 +51,7 @@ For a complex project, prefer a few high-value files. **Do not optimize for shor
 - `<ProjectName>.md`: Problem Model, evidence map, Solutions, Synthesis, Related Learning.
 - `solutions.md`: unified individual Solution reconstruction; every expected Solution must remain concretely understandable.
 - `solution-space.md`: Convergence, Alternatives, Negative Evidence, Open Questions, Mechanism Synthesis, Decision Guide, Top Principles, and Transfer.
-- `claims.yaml`: optional claim-level ledger for important or controversial cross-solution claims.
+- `claims.yaml`: optional machine-generated projection of durable verified Claims from the latest active canonical `solution-space` run; do not hand-edit or refresh it by timestamp.
 
 Use a compact comparison matrix **plus** dense per-solution reconstruction. Track implementation, motivation, effectiveness, and transfer confidence separately. Run Evidence, Coverage, Synthesis, Red-team, and Human Completeness passes. Do not create one file per solution unless it materially improves understanding.
 

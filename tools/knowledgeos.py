@@ -380,7 +380,7 @@ def style_issues(note: dict) -> list[dict]:
     if note["properties"].get("type") in {"project", "project-doc"}:
         marker = "## Evidence Map" if "## Evidence Map" in text else "<summary>Evidence Map</summary>"
         if marker in text and any(line.startswith("## ") for line in text[text.rfind(marker):].splitlines()[1:]): issues.append({"kind": "evidence_map_not_last", "path": note["path"]})
-        if "Evidence and limits" in text: issues.append({"kind": "legacy_evidence_section", "path": note["path"]})
+        if "Evidence and limits" in text or re.search(r"(?m)^##\s+范围限制\s*$", text): issues.append({"kind": "legacy_evidence_section", "path": note["path"]})
         if len(re.findall(r"repo://[^\s)`]+", note["body"])) > 3: issues.append({"kind": "path_heavy_prose", "path": note["path"]})
         if note["source_refs"] and any(str(x).startswith("repo://") for x in note["source_refs"]):
             issues.append({"kind": "PROVENANCE_MIGRATION_WARNING", "path": note["path"]})
@@ -470,16 +470,10 @@ def claim_ledger_report() -> list[dict]:
                 k, v = line.split(":", 1); fields[k.strip()] = v.strip().strip('"')
         run_id = fields.get("generated_from_run")
         if not run_id:
-            updated = fields.get("updated")
-            if updated:
-                try:
-                    ledger_date = datetime.fromisoformat(updated).date()
-                    siblings = [p for p in ledger.parent.glob("*.md") if p != ledger]
-                    newest = max((p.stat().st_mtime for p in siblings), default=None)
-                    if newest is not None and datetime.fromtimestamp(newest).date() > ledger_date:
-                        issues.append({"kind": "CLAIM_LEDGER_STALE", "ledger": str(ledger.relative_to(ROOT))})
-                except ValueError:
-                    pass
+            # Legacy/manual ledgers cannot establish semantic freshness with a date.
+            # A current ledger must be projected from a verified canonical run.
+            issues.append({"kind": "CLAIM_LEDGER_STALE", "ledger": str(ledger.relative_to(ROOT)),
+                           "detail": "ledger lacks generated_from_run; timestamps do not establish currentness"})
             continue
         gate = ROOT / ".knowledgeos" / "runs" / run_id / "gate.json"
         run = ROOT / ".knowledgeos" / "runs" / run_id / "run.json"
@@ -487,6 +481,24 @@ def claim_ledger_report() -> list[dict]:
             issues.append({"kind": "CLAIM_LEDGER_DRIFT", "ledger": str(ledger.relative_to(ROOT)), "run": run_id})
             continue
         gate_data = json.loads(gate.read_text())
+        # A ledger is current only when it comes from the latest active canonical
+        # solution-space finalization for the same Project folder. Historical
+        # COMMITTED runs remain valid audit records but may not own current Claims.
+        finalizations_path = ROOT / ".knowledgeos" / "finalizations.json"
+        if finalizations_path.is_file():
+            try:
+                entries = (json.loads(finalizations_path.read_text(encoding="utf-8")) or {}).get("entries", [])
+                canonical_output = str((ledger.parent / "solution-space.md").relative_to(ROOT))
+                candidates = [e for e in entries if e.get("output") == canonical_output]
+                if candidates:
+                    active = max(candidates, key=lambda e: str(e.get("finalized_at", "")))
+                    if active.get("run_id") != run_id:
+                        issues.append({"kind": "CLAIM_LEDGER_STALE", "ledger": str(ledger.relative_to(ROOT)),
+                                       "run": run_id, "active_run": active.get("run_id")})
+                        continue
+            except (ValueError, json.JSONDecodeError, OSError):
+                issues.append({"kind": "CLAIM_LEDGER_DRIFT", "ledger": str(ledger.relative_to(ROOT)), "run": run_id})
+                continue
         run_dir = ROOT / ".knowledgeos" / "runs" / run_id
         claims_path = run_dir / "claims.jsonl"
         if not claims_path.is_file():

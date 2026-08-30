@@ -2,6 +2,14 @@
 
 All notable changes to KnowledgeOS are documented here.
 
+## [0.2.1] - 2026-08-30
+
+- Calibrated OrbitWars historical-opponent claims: SimJeg is recorded as having experimented with a frozen-checkpoint pool and removing it from the final run, not as explicitly regretting its removal.
+- Reworded simulator-throughput synthesis to preserve the strong engineering convergence without unsupported universal/causal claims such as “no rewrite means no large-scale training.”
+- Removed the Human-facing `范围限制` audit section from `solutions.md`; source-coverage and verification details remain machine/provenance concerns while knowledge-relevant caveats stay local to the relevant method.
+- Hardened `claims.yaml` lifecycle: the ledger is generated only from a verified canonical `solution-space` run, stale ledgers are detected against the latest active finalization, and a newer canonical run with no durable Claims removes any older generated ledger.
+- Added Golden Reference regression checks for the above content and lifecycle rules.
+
 ## [0.2.0] - 2026-08-29
 
 - Added Research `coverage-plan.json`, Fact Coverage Gate, and Human Draft Completeness Gate to prevent verification-induced under-documentation.

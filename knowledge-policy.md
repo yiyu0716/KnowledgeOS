@@ -182,6 +182,8 @@ current | superseded | contested
 
 `current` is the default actionable conclusion; `superseded` remains searchable as history but should not be presented as the current recommendation; `contested` requires its conflict/boundary to travel with the Claim. Newer modification time alone never establishes currentness.
 
+`claims.yaml` is an optional generated projection, not a second hand-maintained source of truth. Only the latest active, verified canonical `solution-space` run may refresh it. Its freshness is determined by run identity and durable-Claim hashes, never by an `updated` date. If a newer canonical run supersedes the run that generated the ledger, report `CLAIM_LEDGER_STALE`; if ledger content diverges from the verified durable Claims, report `CLAIM_LEDGER_DRIFT`. If the latest canonical run contains no durable Claims, no stale prior ledger may remain.
+
 ## Multi-Solution Evidence Axes
 
 Track separately:

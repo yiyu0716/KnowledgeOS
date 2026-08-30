@@ -929,12 +929,17 @@ def finalize_run(run: Run, target: str) -> dict:
     if run.data().get("scope") == "solution-space":
         claims, _ = read_jsonl(run.claims_path)
         durable = [c for c in claims if c.get("durable") is True]
+        ledger = resolved.parent / "claims.yaml"
         if durable:
             claim_digest = hashlib.sha256("\n".join(canonical_line(c) for c in durable).encode()).hexdigest()
-            ledger = resolved.parent / "claims.yaml"
             lines = ["schema_version: 1", f"project: {run.data().get('project')}", f"generated_from_run: {run.run_id}", f"facts_sha256: {data.get('facts_sha256')}", f"claims_source_sha256: {jsonl_sha256(claims)}", f"durable_claims_sha256: {claim_digest}", f"generated_at: {utc_now()}", "claims:"]
             lines.extend("  - " + json.dumps(c, ensure_ascii=False) for c in durable)
             ledger.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        elif ledger.is_file():
+            # A newer canonical run with no durable Claims supersedes any older
+            # generated ledger. Keeping the old file would make it fresh-by-date
+            # but semantically stale.
+            ledger.unlink()
     return {"run": run.run_id, "ok": True, "state": "COMMITTED", "output": manifest_entry["output"]}
 
 

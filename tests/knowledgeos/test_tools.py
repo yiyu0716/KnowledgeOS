@@ -145,25 +145,19 @@ class KnowledgeOSToolsTest(unittest.TestCase):
         MODULE.ROOT, MODULE.VAULT = old_root, old_vault
 
     def test_claim_ledger_stale_is_reported(self):
-        import os
-        from datetime import datetime, timedelta
         old_root, old_vault = MODULE.ROOT, MODULE.VAULT
         with tempfile.TemporaryDirectory() as tmp:
             vault = Path(tmp) / "vault" / "projects" / "Demo"
             vault.mkdir(parents=True)
             ledger = vault / "claims.yaml"
-            ledger.write_text("schema_version: 1\nupdated: 2020-01-01\nclaims: []\n", encoding="utf-8")
-            doc = vault / "solution-space.md"
-            doc.write_text("# Synthesis\n", encoding="utf-8")
-            fresh = datetime.now() - timedelta(days=1)
-            os.utime(doc, (fresh.timestamp(), fresh.timestamp()))
+            # A manual timestamp cannot make a Claim Ledger semantically current.
+            ledger.write_text("schema_version: 1\nupdated: 2099-12-31\nclaims: []\n", encoding="utf-8")
+            (vault / "solution-space.md").write_text("# Synthesis\n", encoding="utf-8")
             MODULE.VAULT = Path(tmp) / "vault"
             MODULE.ROOT = Path(tmp)
             issues = MODULE.claim_ledger_report()
             self.assertTrue(any(i["kind"] == "CLAIM_LEDGER_STALE" for i in issues))
-            # Fresh ledger (updated >= newest sibling change) is not flagged.
-            ledger.write_text(f"schema_version: 1\nupdated: {fresh.date().isoformat()}\nclaims: []\n", encoding="utf-8")
-            self.assertFalse(MODULE.claim_ledger_report())
+            self.assertTrue(any("generated_from_run" in i.get("detail", "") for i in issues))
         MODULE.ROOT, MODULE.VAULT = old_root, old_vault
 
     def test_claim_ledger_manual_edit_is_reported(self):
@@ -180,6 +174,40 @@ class KnowledgeOSToolsTest(unittest.TestCase):
             (vault / "claims.yaml").write_text(f"schema_version: 1\ngenerated_from_run: r1\ndurable_claims_sha256: {digest}\nclaims:\n  - {{\"claim_id\":\"C1\",\"durable\":true,\"statement\":\"tampered\"}}\n")
             MODULE.ROOT, MODULE.VAULT = root, root / "vault"; self.assertTrue(any(i["kind"] == "CLAIM_LEDGER_DRIFT" for i in MODULE.claim_ledger_report()))
         MODULE.ROOT, MODULE.VAULT = old_root, old_vault
+
+    def test_claim_ledger_old_run_is_stale_after_new_canonical_solution_space(self):
+        import json, hashlib
+        old_root, old_vault = MODULE.ROOT, MODULE.VAULT
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); vault = root / "vault/projects/Demo"; vault.mkdir(parents=True)
+            for run_id, statement in (("r1", "old"), ("r2", "new")):
+                run = root / ".knowledgeos/runs" / run_id; run.mkdir(parents=True)
+                claim = {"claim_id":"C1","durable":True,"statement":statement}
+                canon = json.dumps(claim, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+                (run / "run.json").write_text(json.dumps({"state":"COMMITTED"}))
+                (run / "gate.json").write_text("{}")
+                (run / "claims.jsonl").write_text(canon + "\n")
+            old_claim = {"claim_id":"C1","durable":True,"statement":"old"}
+            canon = json.dumps(old_claim, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+            digest = hashlib.sha256(canon.encode()).hexdigest()
+            (vault / "claims.yaml").write_text(f"schema_version: 1\ngenerated_from_run: r1\ndurable_claims_sha256: {digest}\nclaims:\n  - {canon}\n")
+            derived = root / ".knowledgeos"; derived.mkdir(exist_ok=True)
+            (derived / "finalizations.json").write_text(json.dumps({"entries":[
+                {"run_id":"r1","output":"vault/projects/Demo/solution-space.md","finalized_at":"2026-08-01T00:00:00Z"},
+                {"run_id":"r2","output":"vault/projects/Demo/solution-space.md","finalized_at":"2026-08-02T00:00:00Z"}
+            ]}))
+            MODULE.ROOT, MODULE.VAULT = root, root / "vault"
+            issues = MODULE.claim_ledger_report()
+            self.assertTrue(any(i["kind"] == "CLAIM_LEDGER_STALE" and i.get("active_run") == "r2" for i in issues))
+        MODULE.ROOT, MODULE.VAULT = old_root, old_vault
+
+    def test_orbitwars_golden_docs_do_not_regress_known_calibration(self):
+        ppo = (ROOT / "vault/projects/OrbitWars/ppo-training.md").read_text(encoding="utf-8")
+        solutions = (ROOT / "vault/projects/OrbitWars/solutions.md").read_text(encoding="utf-8")
+        self.assertNotIn("Isaiah/SimJeg 的后悔陈述", ppo)
+        self.assertNotIn("八个方案全部重写了 simulator", ppo)
+        self.assertNotIn("没有重写就没有", ppo)
+        self.assertNotIn("## 范围限制", solutions)
 
 
 if __name__ == "__main__":
