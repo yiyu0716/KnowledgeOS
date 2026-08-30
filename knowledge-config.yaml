@@ -1,3 +1,11 @@
 # KnowledgeOS user preferences
 # Presentation only; does not change knowledge semantics or provenance.
 output_style: zh_en_terms
+
+# Optional Vector Search V1
+# Set true only after installing numpy and sentence-transformers.
+vector: true
+provider: ollama
+model: qwen3-embedding:0.6b
+endpoint: http://localhost:11434
+dimension: 1024

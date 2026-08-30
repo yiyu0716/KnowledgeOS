@@ -45,14 +45,15 @@ KnowledgeOS has four focused workflows: `search`, `summarize`, `compare`, and `m
 
 ## Multi-Solution Output
 
-For a complex project, prefer a few high-value files:
+For a complex project, prefer a few high-value files. **Do not optimize for shortness**: formal research must satisfy Precision + Coverage + Synthesis, with a coverage plan before Fact freeze and a completeness check before finalize.
+
 
 - `<ProjectName>.md`: Problem Model, evidence map, Solutions, Synthesis, Related Learning.
-- `solutions.md`: unified individual Solution reconstruction and portable provenance.
-- `solution-space.md`: Consensus, Divergence, Unique, Failed Directions, Open Questions, decision conditions, and Transfer.
+- `solutions.md`: unified individual Solution reconstruction; every expected Solution must remain concretely understandable.
+- `solution-space.md`: Convergence, Alternatives, Negative Evidence, Open Questions, Mechanism Synthesis, Decision Guide, Top Principles, and Transfer.
 - `claims.yaml`: optional claim-level ledger for important or controversial cross-solution claims.
 
-Use a compact comparison matrix. Track implementation, motivation, effectiveness, and transfer confidence separately. Run Evidence, Synthesis, and Red-team passes. Do not create one file per solution unless it materially improves understanding.
+Use a compact comparison matrix **plus** dense per-solution reconstruction. Track implementation, motivation, effectiveness, and transfer confidence separately. Run Evidence, Coverage, Synthesis, Red-team, and Human Completeness passes. Do not create one file per solution unless it materially improves understanding.
 
 ## Learning Promotion
 

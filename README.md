@@ -1,6 +1,6 @@
 # KnowledgeOS
 
-**Version:** 0.1.0
+**Version:** 0.2.0
 
 > **KnowledgeOS turns real projects into reusable knowledge: from evidence, to mechanisms, to principles, to better decisions on the next problem.**
 >
@@ -78,6 +78,21 @@ Detailed repository, commit, path, symbol, line, confidence, and verification st
 
 ## Workflow / 工作流程
 
+### Formal Research Path / 正式研究路径
+
+```text
+Evidence
+→ Coverage Plan
+→ Dense Verified Facts
+→ Verified Claims / Mechanisms
+→ WRITE_ALLOWED
+→ Full Human Draft
+→ Completeness Gate
+→ Human Markdown
+```
+
+Research Gate 同时保护 **Precision** 与 **Coverage**：写出的内容必须可验证，重要的受支持知识也不能因为验证成本而被省略。Human Markdown 用于学习与迁移；machine research artifacts 用于验证、哈希冻结和 provenance 追溯。
+
 ### One solution / 单个方案
 
 ```text
@@ -107,6 +122,21 @@ Solutions
 Project Top 3 Principles summarize what matters most for that project. They do not automatically create three global Learning notes. Existing Learning is updated when a mechanism recurs; a new Learning requires real evidence, clear boundaries, and cross-project value.
 
 Project Top 3 代表该项目最值得记住的三条原则，但不会强制创建三篇全局 Learning。机制重复出现时更新已有 Learning；只有具备真实证据、明确边界和跨项目价值时才创建新的 Learning。
+
+## Golden Document Quality / Golden 文档质量
+
+KnowledgeOS 的正式研究目标不是“最短且不犯错”，而是：
+
+```text
+Precision + Coverage + Synthesis
+```
+
+- `solutions.md` 必须能恢复每个真实方案如何运行；
+- `solution-space.md` 必须能帮助设计下一个方案；
+- Focused Docs 必须能独立学会一个方向，而不是只做摘要卡片；
+- Project Home 保持轻量导航，不复制 canonical docs 的完整机制。
+
+`coverage-plan.json` 在 Fact 冻结前声明 expected entities / important axes，Draft Completeness Gate 在 finalize 前检查 required knowledge roles / expected entity labels。字数阈值只作为 `SUSPICIOUSLY_THIN_OUTPUT` smoke test，不是生成目标。
 
 ## Four Agent Workflows / 四个 Agent 工作流
 

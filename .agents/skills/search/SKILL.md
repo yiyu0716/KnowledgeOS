@@ -1,19 +1,25 @@
 ---
 name: search
-description: Retrieve existing KnowledgeOS learning and evidence for a prior concept. Use for "what have I learned", similar experience, or knowledge-base lookup. Read-only.
+description: Retrieve prior KnowledgeOS experience read-only using lexical + semantic retrieval, then add only useful relation/provenance context without changing knowledge.
 ---
 
 # Search
 
-## Language Mode
+Search answers: **“What have I learned before that is relevant now?”** It is read-only.
 
-Read `knowledge-config.yaml` when composing the answer. Follow `output_style: english` or `output_style: zh_en_terms`; an explicit user instruction overrides it. Search ranking and machine results are language-independent.
+## Retrieval
 
-Use when the user asks what the knowledge base already knows. Do not summarize a new solution or compare multiple solutions.
+Use the current deterministic search pipeline (BM25 and, when enabled, Vector + RRF). Preserve relevance across Learning, focused docs, Project docs, and Project Home; Learning is a soft preference, not a hard ordering rule.
 
-1. Run `python3 tools/knowledgeos.py search "<query>"`.
-2. Inspect Learning results first, then project documents, then source evidence.
-3. Follow canonical graph/provenance links only when needed.
-4. Report evidence strength and unresolved areas.
+After primary retrieval, use existing `projects`, `derived_from`, Wikilinks, and provenance to add a small amount of 1-hop context when it materially helps interpretation. Do not flood the answer with graph neighbors.
 
-Never write to `vault/`, registry, or sources during search. Do not implement BM25 or graph parsing in this Skill; use the deterministic tool.
+Prefer current durable conclusions when claim lifecycle metadata is available. `superseded` knowledge remains useful for historical questions; `contested` knowledge must carry its conflict/boundary.
+
+## Response behavior
+
+- For experience/transfer questions, surface the most relevant Learning and the Project/focused evidence that makes it concrete.
+- For project-specific factual questions, focused Project docs may outrank Learning.
+- If multiple near-duplicate notes express the same mechanism, prefer the canonical owner and mention related notes rather than returning redundant copies.
+- Trace to raw Evidence only when the user needs verification or implementation detail.
+
+Search never auto-writes or auto-maintains the Vault. If the current task produces new evidence that could update knowledge, report it as a maintenance candidate; do not modify knowledge unless explicitly asked.
