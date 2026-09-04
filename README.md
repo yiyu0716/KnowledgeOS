@@ -169,6 +169,10 @@ The workflows are reasoning protocols, not separate data models. Deterministic o
 
 The repository is intentionally dependency-light. Markdown is the durable, human-auditable artifact; generated JSON indexes under `.knowledgeos/` are rebuildable projections.
 
+## Project Examples / 项目示例
+
+Four complete, evidence-backed project-document snapshots are available under [showcase/](showcase/README.md): OrbitWars, Aicoding-engineering, Agent, and Rogii. They are Human-facing examples only; local Evidence, registry metadata, and Research Runs remain the authoritative verification layer.
+
 本项目保持依赖简单。Markdown 是持久且可人工审计的事实表达；`.knowledgeos/` 下的 JSON 只是可重建的派生投影。
 
 ## Usage / 使用

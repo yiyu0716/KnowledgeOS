@@ -8,6 +8,11 @@ def _scalar(value: str):
     value = value.strip().strip('"\'')
     return value
 
+
+def _canonical_source_id(value: str) -> str:
+    """Accept registry IDs with or without the Human-facing ``source:`` prefix."""
+    return value.removeprefix("source:")
+
 def _candidates(root: Path) -> list[dict]:
     candidates = []
     for path in sorted((root / "registry").glob("*.yaml")):
@@ -19,7 +24,7 @@ def _candidates(root: Path) -> list[dict]:
             m = re.match(r"^\s*-\s+(?:id|source_id):\s*(.+)$", line)
             if m:
                 if current: candidates.append(current)
-                current = {"id": _scalar(m.group(1)), "kind": section}; continue
+                current = {"id": _canonical_source_id(_scalar(m.group(1))), "kind": section}; continue
             if re.match(r"^\s*-\s+rank:\s*", line):
                 if current: candidates.append(current)
                 current = {"kind": section}; continue
@@ -38,6 +43,7 @@ def resolve_source(root: Path, source_id: str, manifest_sources=None) -> dict | 
     The registry format is intentionally simple YAML; this parser only reads the
     scalar fields used by source ownership and drift checks.
     """
+    source_id = _canonical_source_id(source_id)
     candidates = _candidates(root)
     found = next((x for x in candidates if x.get("id") == source_id), None)
     if not found and manifest_sources:

@@ -63,9 +63,14 @@ class KnowledgeOSToolsTest(unittest.TestCase):
 
     def test_project_projection_is_separate(self):
         pgraph = MODULE.project_graph()
-        self.assertEqual(set(pgraph["nodes"]), {"projects/KnowledgeOS/KnowledgeOS", "projects/OrbitWars/OrbitWars"})
+        self.assertIn("projects/KnowledgeOS/KnowledgeOS", pgraph["nodes"])
+        self.assertIn("projects/OrbitWars/OrbitWars", pgraph["nodes"])
         self.assertEqual(pgraph["roots"], ["projects/KnowledgeOS/KnowledgeOS"])
-        self.assertEqual(pgraph["edges"], [{"parent": "projects/KnowledgeOS/KnowledgeOS", "child": "projects/OrbitWars/OrbitWars"}])
+        self.assertIn(
+            {"parent": "projects/KnowledgeOS/KnowledgeOS", "child": "projects/OrbitWars/OrbitWars"},
+            pgraph["edges"],
+        )
+        self.assertTrue(all(node.startswith("projects/") for node in pgraph["nodes"]))
         self.assertFalse(pgraph["unresolved_parents"])
         self.assertFalse(pgraph["cycles"])
 
