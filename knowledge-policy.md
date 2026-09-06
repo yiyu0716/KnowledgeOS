@@ -6,7 +6,7 @@
 2. Durable knowledge: `vault/` Markdown and Properties.
 3. Registry: `registry/` source identity and ingestion metadata only.
 
-Generated indexes, Research Runs, graph data, caches, and lint reports are rebuildable projections.
+Generated indexes, graph data, caches, and lint reports are rebuildable projections. Unaccepted Research Runs are workspaces; accepted research evidence under `sources/research/` is durable. Never clean legacy committed runs before a successful archival migration.
 
 ## Safety
 
@@ -26,7 +26,7 @@ Human-facing generation reads `knowledge-config.yaml`. With `output_style: zh_en
 
 Human-facing Markdown is optimized for understanding: concrete `What`, `Why`, `Mechanism`, comparison, principles, transfer, and a concise `Evidence Map` at the end. Human `source_refs` contain only stable `source:<id>` identities.
 
-Detailed repository, commit, path, symbol, line, confidence, excerpt hashes, Fact IDs, Claim IDs, and verification state remain authoritative in Research Runs, registry, and derived provenance indexes. Hiding machine detail must never reduce verification strength.
+Detailed repository, commit, path, symbol, line, confidence, excerpt hashes, Fact IDs, Claim IDs and accepted verification state remain authoritative in primary sources, registry identity and accepted `sources/research/` bundles. Research workspaces prepare this evidence; provenance indexes only project it. Hiding machine detail must never reduce verification strength.
 
 `Paths may be hidden; facts may not.`
 
@@ -168,7 +168,8 @@ Canonical documents have different responsibilities:
 - `solutions.md`: Reality canonical source. Reconstruct every expected Solution with a Thesis and enough concrete method detail to understand how it runs.
 - `solution-space.md`: Project-wide synthesis canonical source. Preserve Convergence, Alternatives, Negative Evidence, Open Questions, Mechanism Synthesis, Decision Guide, Top Principles, and Transfer when supported.
 - Focused Project Docs: high-density treatment of one direction with Scope, Concrete Landscape/Matrix, key axes, mechanisms, trade-offs, focused principles, and Transfer.
-- `Learning`: cross-project reusable mechanism; not a copy of Project prose.
+- Project-level `Learning`: retain the project as a coherent learning unit without duplicating every canonical fact.
+- Problem–mechanism `Learning`: a separately reusable problem signature, mechanism and boundary; not a copy of Project prose.
 
 The exact headings may vary, but the knowledge roles may not silently disappear. A generated draft missing required roles/entities is `DOCUMENT_COMPLETENESS_FAIL`. Extremely short output relative to its declared task receives `SUSPICIOUSLY_THIN_OUTPUT` even if all written sentences are verified.
 
@@ -194,3 +195,22 @@ Track separately:
 - transfer confidence: repeated mechanism across projects/tasks > controlled mechanism evidence > strong inference.
 
 Multiple Solutions sharing a component establish a recurring pattern worth testing, not causal effectiveness.
+
+## Target revision and scoped updates
+
+Bind the target while the run is INIT, EVIDENCE_READY or FACTS_READY, before
+verified extraction/drafting. Bindings cannot be silently rebased. A target change
+requires a new plan and run. A missing origin is human-owned; only `origin: codex`
+permits whole-note replacement. `origin: mixed` requires an existing explicitly
+named managed region, and the rest of the file is preserved byte-for-byte.
+
+Small updates may research only the affected evidence and named managed section;
+they do not require regenerating the whole project. New global mechanisms and
+causal claims retain the full evidence/coverage/semantic-review requirements.
+A checksum binds a review to content; it does not prove that review is correct.
+KnowledgeOS locks coordinate its own writers, not arbitrary external editors.
+
+`claims.yaml` is optional and is no longer silently rewritten after partial
+finalization. Use `research export-claims <run-id>` (preview), then `--apply` for
+an explicit export from the current intact whole canonical solution-space run.
+A stale generated ledger is reported; manual unmarked ledgers are protected.

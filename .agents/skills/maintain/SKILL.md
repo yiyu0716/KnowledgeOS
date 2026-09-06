@@ -31,7 +31,7 @@ solutions.md      = per-solution Reality
 solution-space.md = project-wide Mechanism / Principle
 focused docs      = focus-specific Reality + Mechanism
 Project Home      = orientation + compressed navigation
-Learning          = cross-project reusable Principle
+Learning          = project learning OR bounded reusable mechanism
 ```
 
 Flag long semantic duplication, but do not use deduplication as a reason to strip the canonical owner. Evidence Maps and short navigation summaries are not knowledge duplication.
@@ -77,3 +77,15 @@ Small evidence updates should use targeted impact analysis rather than full-proj
 - `origin: human` → never overwrite automatically.
 - `origin: mixed` → preserve human sections; only managed regions may be regenerated when explicitly requested.
 - missing `origin` → human-owned.
+
+## 0.3.0 integrity checks
+
+Audit `sources/research/` archive checksums and the active output scope in addition
+to workspace state. Missing-origin notes remain protected; mixed updates require
+`<!-- KOS:managed:<id>:start -->` and matching `:end` markers. Bind before planning.
+Treat malformed or nested YAML as a diagnostic, never as permission to overwrite.
+
+Inspect both project Learning and mechanism Learning. Use `reuse` only to locate
+declared Applications/应用记录; do not equate links with proven effectiveness.
+Use `eval <suite.json>` for retrieval and boundary-term regression, not as a
+semantic truth score. Keep thinness and exact-duplicate checks as smoke alarms.

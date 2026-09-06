@@ -12,9 +12,33 @@ SPEC.loader.exec_module(MODULE)
 
 
 class KnowledgeOSToolsTest(unittest.TestCase):
+    def setUp(self):
+        self._original_paths = {name: getattr(MODULE, name) for name in
+            ("ROOT", "VAULT", "CONFIG", "DERIVED", "VECTOR_INDEX", "VECTOR_META")}
+        self._fixture = tempfile.TemporaryDirectory()
+        root = Path(self._fixture.name)
+        MODULE.ROOT = root
+        MODULE.VAULT = root / "vault"
+        MODULE.CONFIG = root / "knowledge-config.yaml"
+        MODULE.DERIVED = root / ".knowledgeos"
+        MODULE.VECTOR_INDEX = MODULE.DERIVED / "vector-index.npz"
+        MODULE.VECTOR_META = MODULE.DERIVED / "vector-meta.json"
+        MODULE.CONFIG.write_text("vector: false\n", encoding="utf-8")
+        fixtures = {
+            "projects/KnowledgeOS/KnowledgeOS.md": "---\ntype: project\n---\n# KnowledgeOS\n",
+            "projects/OrbitWars/OrbitWars.md": "---\ntype: project\nparents: [\"[[KnowledgeOS]]\"]\n---\n# OrbitWars\n",
+            "projects/OrbitWars/opponents.md": "---\ntype: project-doc\nprojects: [\"[[OrbitWars]]\"]\nsource_refs: [source:fixture]\n---\n# Opponents\n## 对手分布\n对手分布决定部署覆盖。feasibility layer separates geometry.\n",
+            "learning/Provenance.md": "---\ntype: learning\nprojects: [\"[[KnowledgeOS]]\"]\n---\n# Provenance\nprovenance 知识需要证据和边界。\n",
+        }
+        for relative, text in fixtures.items():
+            path = MODULE.VAULT / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+
     def tearDown(self):
-        MODULE.ROOT = ROOT
-        MODULE.VAULT = ROOT / "vault"
+        for name, value in self._original_paths.items():
+            setattr(MODULE, name, value)
+        self._fixture.cleanup()
 
     def test_search_supports_mixed_language(self):
         results = MODULE.bm25("provenance 知识", limit=10)
@@ -207,8 +231,8 @@ class KnowledgeOSToolsTest(unittest.TestCase):
         MODULE.ROOT, MODULE.VAULT = old_root, old_vault
 
     def test_orbitwars_golden_docs_do_not_regress_known_calibration(self):
-        ppo = (ROOT / "vault/projects/OrbitWars/ppo-training.md").read_text(encoding="utf-8")
-        solutions = (ROOT / "vault/projects/OrbitWars/solutions.md").read_text(encoding="utf-8")
+        ppo = (ROOT / "showcase/projects/OrbitWars/ppo-training.md").read_text(encoding="utf-8")
+        solutions = (ROOT / "showcase/projects/OrbitWars/solutions.md").read_text(encoding="utf-8")
         self.assertNotIn("Isaiah/SimJeg 的后悔陈述", ppo)
         self.assertNotIn("八个方案全部重写了 simulator", ppo)
         self.assertNotIn("没有重写就没有", ppo)

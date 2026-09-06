@@ -27,7 +27,7 @@ A summary that omits important supported facts to reduce verification work is a 
 For high-value, complex, multi-source Project Knowledge, use the Research Gate:
 
 ```bash
-python3 tools/knowledgeos.py research init <run-id> --project <project> --scope <scope>
+python3 tools/knowledgeos.py research init <run-id> --project <project> --scope <scope> --target <target.md>
 python3 tools/knowledgeos.py research verify <run-id>        # repeat through WRITE_ALLOWED
 python3 tools/knowledgeos.py research verify-draft <run-id>  # structure, then final verification
 python3 tools/knowledgeos.py research finalize <run-id> <target.md>
@@ -74,3 +74,12 @@ For a durable one-solution note, prefer:
 A Focused summary must retain enough concrete facts to be independently useful; it is not a compressed pointer to `solutions.md`.
 
 Keep detailed provenance in machine state, not path dumps in the body. Learning Promotion runs only after the Human document is complete.
+
+## Preserve both learning units
+
+A project-level Learning is a valid final unit. Do not force it to fragment into
+mechanisms. When a bounded reusable mechanism is useful, first search existing
+mechanism Learning and update its evidence or boundary instead of duplicating it.
+Set `learning_kind: project` or `mechanism` only on new `type: learning` notes.
+Keep existing untyped Learning unchanged. Final accepted proof must be archived
+under `sources/research/`; indexes are not authoritative research evidence.

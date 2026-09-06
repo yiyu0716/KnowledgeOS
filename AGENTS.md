@@ -16,7 +16,7 @@ Use Exa MCP proactively when current or external information materially improves
 
 ```text
 vault/{inbox,learning,papers,projects,archive}
-sources/{repos,papers}
+sources/{repos,papers,research}
 registry/
 .knowledgeos/        # rebuildable derived state only
 ```
@@ -57,7 +57,7 @@ Use a compact comparison matrix **plus** dense per-solution reconstruction. Trac
 
 ## Learning Promotion
 
-Learning is the system center and should answer: “What should I remember for a future problem?” Promote only when a mechanism has a recognizable problem signature, real evidence, use conditions, boundaries/failure conditions, and cross-project potential. Update an existing Learning note when the mechanism recurs; do not create duplicate Learning notes.
+Project units and problem–mechanism units are parallel durable outputs. Preserve project-level Learning; mechanism Learning should answer: “What should I remember for a future problem?” Promote only when a mechanism has a recognizable problem signature, real evidence, use conditions, boundaries/failure conditions, and cross-project potential. Update an existing Learning note when the mechanism recurs; do not create duplicate Learning notes.
 
 ## Deterministic Tools
 
@@ -73,3 +73,15 @@ No PostgreSQL, vector database, Neo4j, Redis, MCP server, web UI, complex ontolo
 ## Completion
 
 For repository learning or ingestion, report analyzed repository/commit, inspected areas, KnowledgeOS files changed, unresolved/unverified areas, and whether source repositories were modified. Do not claim complete coverage unless achieved.
+
+## 0.3.0 write and storage contract
+
+Use `learning_kind: project | mechanism` only on `type: learning`; legacy missing
+values are not automatically reclassified. Do not force a project into mechanism
+cards or create duplicate project prose in a mechanism note.
+
+Before planning, `research init ... --target <note>` or `research bind-target`
+records the target revision. Missing `origin` is human-owned. Mixed notes require
+a named existing managed region; preserve everything outside it. Accepted runs are
+archived to `sources/research/<run-id>/`, not disposable cache. Preserve those
+bundles and private source material in a private backup. Read UPGRADE_0.3.0.md.

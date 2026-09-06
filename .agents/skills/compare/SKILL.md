@@ -18,7 +18,7 @@ The Gate must prevent both unsupported claims **and** verification-induced under
 ## Required Research Run
 
 ```bash
-python3 tools/knowledgeos.py research init <run-id> --project <project> --scope <scope>
+python3 tools/knowledgeos.py research init <run-id> --project <project> --scope <scope> --target <target.md>
 python3 tools/knowledgeos.py research verify <run-id>        # repeat until WRITE_ALLOWED
 python3 tools/knowledgeos.py research verify-draft <run-id>  # structural pass, then full pass
 python3 tools/knowledgeos.py research finalize <run-id> <target.md>
@@ -73,3 +73,12 @@ The exact headings may vary, but missing expected entities/roles is `DOCUMENT_CO
 Before finalization check unsupported facts, attribution, universal wording, missing counterexamples, contradictions, mechanism conflation, stale hashes, machine-path leakage, canonical duplication, and **under-documentation**. `SUSPICIOUSLY_THIN_OUTPUT` is a warning that requires review, not a target to game.
 
 Only `research finalize` may write formal target Markdown. Final Markdown is Human-first and never exposes Fact/Claim IDs, hashes, run IDs, registry paths, or verification prose.
+
+## Preserve both learning units
+
+A project-level Learning is a valid final unit. Do not force it to fragment into
+mechanisms. When a bounded reusable mechanism is useful, first search existing
+mechanism Learning and update its evidence or boundary instead of duplicating it.
+Set `learning_kind: project` or `mechanism` only on new `type: learning` notes.
+Keep existing untyped Learning unchanged. Final accepted proof must be archived
+under `sources/research/`; indexes are not authoritative research evidence.

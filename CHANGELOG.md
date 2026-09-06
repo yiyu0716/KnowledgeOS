@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 — 2026-09-06
+
+- Preserve parallel project-level and problem–mechanism Learning without new
+  note types, domain directories, forced promotion or automatic legacy retyping.
+- Protect missing-origin/human notes and mixed managed regions; bind target
+  revisions before planning, recheck before writes, and use cooperative locks.
+- Retain accepted evidence under private `sources/research/`; rebuild provenance
+  indexes without pretending semantic research can be regenerated from a cache.
+- Preserve heading/block references, aliases and link context; fix graph CLI
+  registration, repeated chunk IDs, RRF best-rank aggregation and lost snippets.
+- Validate embedding dimensions, batch local embedding requests, detect stale or
+  inconsistent vector caches, and expose lexical fallback warnings.
+- Freeze Fact/verdict and evidence-metadata fingerprints across stage transitions.
+- Validate project roles with recognized heading alternatives rather than one
+  exact template. Add declared-application reporting and retrieval evaluation.
+- Add isolated regression tests; remove dependence on an unpublished private
+  vault from the existing tool-test fixtures.
+
+
 All notable changes to KnowledgeOS are documented here.
 
 ## [0.2.1] - 2026-08-30

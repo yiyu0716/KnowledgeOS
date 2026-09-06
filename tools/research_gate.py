@@ -24,6 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 import sys
 sys.path.insert(0, str(ROOT / "tools"))
 from source_registry import resolve_source
+
+from durable_provenance import (digest, safe_id, bind_target, check_binding, target_path, ownership, region_span, final_text, target_lock, prepare_archive, commit_archive, atomic_write, rebuild_finalizations, archive_legacy, verified_archives, finalization_entries, archive_directory, archive_audit)
 DERIVED = ROOT / ".knowledgeos"
 RUNS_DIR = DERIVED / "runs"
 FINALIZATIONS_PATH = DERIVED / "finalizations.json"
@@ -134,6 +136,7 @@ def write_json_atomic(path: Path, payload: dict) -> None:
 
 class Run:
     def __init__(self, run_id: str):
+        safe_id(run_id)
         self.run_id = run_id
         self.dir = RUNS_DIR / run_id
         self.run_json = self.dir / "run.json"
@@ -247,31 +250,24 @@ class Run:
                 "ok": True, "stage": stage, "errors": [], "warnings": warnings or []}
 
 
-def init_run(run_id: str, project: str, scope: str) -> dict:
+def init_run(run_id: str, project: str, scope: str, target: str | None = None, region: str | None = None) -> dict:
+    safe_id(run_id)
     run = Run(run_id)
     if run.exists():
-        return {"run": run_id, "state": run.state(), "ok": False,
-                "errors": ["run already exists"]}
+        return {"run": run_id, "state": run.state(), "ok": False, "errors": ["run already exists"]}
     run.dir.mkdir(parents=True, exist_ok=False)
-    payload = {"run_id": run_id, "project": project, "scope": scope, "state": "INIT",
-               "created_at": utc_now(), "updated_at": utc_now()}
-    write_json_atomic(run.run_json, payload)
+    write_json_atomic(run.run_json, {"run_id": run_id, "project": project, "scope": scope, "state": "INIT",
+                                    "created_at": utc_now(), "updated_at": utc_now()})
     run.append_transition("INIT")
     write_json_atomic(run.gate_path, {"state": "INIT", "write_allowed": False, "created_at": utc_now()})
     write_json_atomic(run.manifest, {"project": project, "scope": scope, "sources": []})
-    write_json_atomic(run.coverage_plan_path, {
-        "document_kind": scope,
-        "expected_entities": [],
-        "required_axes_by_entity": {},
-        "min_facts_per_entity": 1,
-        "output_contract": {
-            "required_sections": [],
-            "required_entity_labels": [],
-            "min_chars_warning": 0,
-        },
-    })
+    write_json_atomic(run.coverage_plan_path, {"document_kind": scope, "expected_entities": [],
+        "required_axes_by_entity": {}, "min_facts_per_entity": 1,
+        "output_contract": {"required_sections": [], "required_entity_labels": [], "min_chars_warning": 0}})
+    if region and not target: raise ValueError("--region requires --target")
+    if target: bind_target(ROOT, run, target, region)
     return {"run": run_id, "state": "INIT", "advanced_to": None, "ok": True, "errors": [],
-            "next": "write evidence-manifest.json and coverage-plan.json, then `research verify`"}
+            "next": "bind the target before planning, then supply evidence-manifest.json and coverage-plan.json"}
 
 
 # ------------------------------------------------------------ deterministic verification
@@ -467,16 +463,23 @@ def verify_facts(run: Run) -> dict:
         return run.fail("facts", [f"{fid}: semantic verification FAIL" for fid in failed])
     warnings = [f"{fid}: AMBIGUOUS - may not support strong claims" for fid in ambiguous]
     return run.advance("facts", "FACTS_VERIFIED",
-                       extra={"facts_sha256_pending": len(facts), "ambiguous_facts": ambiguous},
+                       extra={"facts_sha256_pending": jsonl_sha256(facts), "facts_verdicts_sha256": digest(run.facts_verify.read_bytes()), "manifest_sha256": digest(run.manifest.read_bytes()), "bindings_sha256": digest(run.evidence_bindings_path.read_bytes() if run.evidence_bindings_path.is_file() else b""), "ambiguous_facts": ambiguous},
                        warnings=warnings)
 
 
 def freeze_facts(run: Run) -> dict:
     facts, errors = read_jsonl(run.facts_path)
-    if errors or not facts:
-        return run.fail("freeze", errors or ["facts.jsonl empty"])
-    digest = jsonl_sha256(facts)
-    return run.advance("freeze", "FACTS_FROZEN", extra={"facts_sha256": digest})
+    if errors or not facts: return run.fail("freeze", errors or ["facts.jsonl empty"])
+    # Verification cannot be carried over to a different Fact set or verdict file.
+    pending = run.data().get("facts_sha256_pending")
+    if not isinstance(pending, str) or jsonl_sha256(facts) != pending:
+        return run.fail("freeze", ["FACTS_CHANGED_AFTER_VERIFICATION: re-verify in a new run"])
+    if digest(run.facts_verify.read_bytes()) != run.data().get("facts_verdicts_sha256"):
+        return run.fail("freeze", ["FACT_VERDICT_DRIFT"])
+    for path, key in ((run.manifest, "manifest_sha256"), (run.evidence_bindings_path, "bindings_sha256")):
+        if run.data().get(key) and digest(path.read_bytes() if path.is_file() else b"") != run.data()[key]:
+            return run.fail("freeze", ["EVIDENCE_METADATA_DRIFT:" + key])
+    return run.advance("freeze", "FACTS_FROZEN", extra={"facts_sha256": jsonl_sha256(facts)})
 
 
 def _claim_entities(facts_by_id: dict[str, dict], fact_ids: list) -> set[str]:
@@ -644,7 +647,7 @@ def verify_claims(run: Run) -> dict:
                                           "eligible_count": len(eligible), "coverage_ratio": (len(covered) / len(eligible) if eligible else 0)}
     if errors:
         return run.fail("claims", errors)
-    return run.advance("claims", "CLAIMS_VERIFIED", extra={"claim_counts": counts})
+    return run.advance("claims", "CLAIMS_VERIFIED", extra={"claim_counts": counts, "claims_sha256": jsonl_sha256(claims), "claims_verdicts_sha256": digest(run.claims_verify.read_bytes())})
 
 
 def current_artifact_hashes(run: Run) -> dict[str, str]:
@@ -657,6 +660,11 @@ def current_artifact_hashes(run: Run) -> dict[str, str]:
         "facts_sha256": jsonl_sha256(facts),
         "claims_sha256": jsonl_sha256(claims),
         "mechanisms_sha256": jsonl_sha256(mechanisms),
+        "facts_verdicts_sha256": digest(run.facts_verify.read_bytes()) if run.facts_verify.is_file() else "",
+        "claims_verdicts_sha256": digest(run.claims_verify.read_bytes()) if run.claims_verify.is_file() else "",
+        "mechanisms_verdicts_sha256": digest(run.mechanisms_verify.read_bytes()) if run.mechanisms_verify.is_file() else "",
+        "manifest_sha256": digest(run.manifest.read_bytes()) if run.manifest.is_file() else digest(b""),
+        "bindings_sha256": digest(run.evidence_bindings_path.read_bytes()) if run.evidence_bindings_path.is_file() else digest(b""),
     }
 
 
@@ -680,6 +688,8 @@ def invalidate_stale(run: Run) -> list[str]:
         digest = hashlib.sha256(run.draft_path.read_bytes()).hexdigest()
         if digest != data.get("draft_sha256"):
             reasons.append("DRAFT_STALE")
+    for key in ("facts_verdicts_sha256", "claims_verdicts_sha256", "mechanisms_verdicts_sha256", "manifest_sha256", "bindings_sha256"):
+        if data.get(key) and current[key] != data[key]: reasons.append("SEMANTIC_VERDICT_DRIFT:" + key)
     if not reasons:
         return []
     run.revoke_gate(", ".join(reasons))
@@ -740,6 +750,8 @@ def verify_mechanisms(run: Run) -> dict:
         verdict = verdict_index.get(mid)
         if verdict is None:
             errors.append(f"{mid}: no semantic verification entry in mechanisms.verify.jsonl")
+        elif verdict.get("status") not in VERIFY_STATUSES:
+            errors.append(f"{mid}: verify status must be PASS/FAIL/AMBIGUOUS")
         elif verdict.get("status") == "FAIL":
             errors.append(f"{mid}: MECHANISM_VERIFY_FAIL ({verdict.get('reason')})")
     for entry in verdicts:
@@ -747,7 +759,7 @@ def verify_mechanisms(run: Run) -> dict:
             errors.append(f"MECHANISM_CONFLATION ({entry.get('mechanisms')}); same name does not imply same changed_variable")
     if errors:
         return run.fail("mechanisms", errors)
-    return run.advance("mechanisms", "MECHANISMS_VERIFIED", extra={"claims_sha256": hashes["claims_sha256"]})
+    return run.advance("mechanisms", "MECHANISMS_VERIFIED", extra={"claims_sha256": hashes["claims_sha256"], "mechanisms_sha256": jsonl_sha256(mechanisms), "mechanisms_verdicts_sha256": digest(run.mechanisms_verify.read_bytes())})
 
 
 def open_gate(run: Run) -> dict:
@@ -757,7 +769,7 @@ def open_gate(run: Run) -> dict:
     claims, _ = read_jsonl(run.claims_path)
     mechanisms, _ = read_jsonl(run.mechanisms_path)
     digests = current_artifact_hashes(run)
-    for key in ("coverage_plan_sha256", "facts_sha256", "claims_sha256"):
+    for key in ("coverage_plan_sha256", "facts_sha256", "claims_sha256", "mechanisms_sha256", "facts_verdicts_sha256", "claims_verdicts_sha256", "mechanisms_verdicts_sha256", "manifest_sha256", "bindings_sha256"):
         if data.get(key) and digests[key] != data.get(key):
             errors.append(f"{key} drift before gate")
     verdicts, _ = read_jsonl(run.claims_verify)
@@ -868,79 +880,56 @@ def verify_draft(run: Run) -> dict:
 
 
 def finalize_run(run: Run, target: str) -> dict:
-    history_errors = run.validate_state_history()
-    if history_errors:
-        return {"run": run.run_id, "ok": False,
-                "error": f"ERROR: Final Markdown write blocked by research gate ({'; '.join(history_errors)})."}
-    invalidate_stale(run)
-    state = run.state()
-    if state != "FINAL_VERIFIED":
-        return {"run": run.run_id, "ok": False,
-                "error": f"ERROR: Final Markdown write blocked by research gate (state={state}, need FINAL_VERIFIED)."}
-    target_path = Path(target)
-    if not target_path.is_absolute():
-        target_path = ROOT / target
-    vault_root = (ROOT / "vault").resolve()
-    resolved = target_path.resolve()
-    root_resolved = ROOT.resolve()  # tolerate /var -> /private/var symlink on macOS
+    staged = None
+    output_written = False
     try:
-        output_rel = str(resolved.relative_to(root_resolved))
-    except ValueError:
-        output_rel = str(resolved)
-    if vault_root not in resolved.parents or resolved.suffix != ".md":
-        return {"run": run.run_id, "ok": False, "error": f"target must be a markdown file under vault/: {target}"}
-    existing = resolved.read_text(encoding="utf-8") if resolved.is_file() else ""
-    if re.search(r"^origin:\s*human\s*$", existing, re.MULTILINE):
+        history_errors = run.validate_state_history()
+        if history_errors: raise ValueError("; ".join(history_errors))
+        invalidate_stale(run)
+        if run.state() != "FINAL_VERIFIED": raise ValueError(f"state={run.state()}, need FINAL_VERIFIED")
+        gate = read_json(run.gate_path) or {}
+        if not gate.get("write_allowed"): raise ValueError("no WRITE_ALLOWED authority")
+        draft = run.draft_path.read_bytes()
+        if digest(draft) != run.data().get("draft_sha256"): raise ValueError("draft hash stale")
+        verdict = read_json(run.draft_verify_path) or {}
+        if not verdict.get("ok") or verdict.get("draft_sha256") != digest(draft): raise ValueError("draft verdict stale")
+        # Preserve the explicit ownership diagnosis even on an unbound legacy run.
+        requested = target_path(ROOT, target)
+        if requested.is_file() and ownership(requested.read_bytes().decode("utf-8")) == "human":
+            raise ValueError("target is human-owned or has no origin; refusing overwrite")
+        path, binding, existing = check_binding(ROOT, run, target)
+        text = final_text(binding, existing, draft.decode("utf-8"))
+        with target_lock(ROOT, binding["target"]):
+            check_binding(ROOT, run, target)
+            data = run.data()
+            entry = {"run_id": run.run_id, "output": binding["target"], "output_sha256": digest(text.encode()),
+                     "coverage_plan_sha256": data.get("coverage_plan_sha256"), "facts_sha256": data.get("facts_sha256"),
+                     "claims_sha256": data.get("claims_sha256"), "mechanisms_sha256": data.get("mechanisms_sha256"),
+                     "finalized_at": datetime.now(timezone.utc).isoformat(timespec="microseconds"), "region": binding.get("region")}
+            if binding.get("region"):
+                a, b = region_span(text, binding["region"]); entry["region_sha256"] = digest(text[a:b].encode())
+            # Write a recoverable proof snapshot before touching durable knowledge.
+            staged = prepare_archive(ROOT, run, text, entry)
+            check_binding(ROOT, run, target)  # final check for edits during preparation
+            atomic_write(path, text.encode("utf-8"))
+            output_written = True
+            run.save(state="COMMITTED", finalization=entry)
+            commit_archive(ROOT, run, staged)
+            staged = None
+            write_json_atomic(run.report_path, {"run_id": run.run_id, "result": "COMMITTED", **entry})
+            index = rebuild_finalizations(ROOT)
+            # claims.yaml is optional. Existing ledgers are never overwritten by a
+            # partial update; stale ledgers are reported and can be explicitly exported.
+            return {"run": run.run_id, "ok": True, "state": "COMMITTED", "output": entry["output"],
+                    "archive": f"sources/research/{run.run_id}", "index": index,
+                    "warnings": ["Existing claims.yaml must be explicitly refreshed; it is not a second source of truth."] if path.name == "solution-space.md" else []}
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        detail = str(exc)
+        if staged is not None:
+            detail += "; a .pending evidence bundle was retained for inspection; do not delete it blindly"
         return {"run": run.run_id, "ok": False,
-                "error": f"target is explicitly human-owned (origin: human); finalize blocked: {target}"}
-    draft = run.draft_path.read_text(encoding="utf-8")
-    expected_draft = run.data().get("draft_sha256")
-    if not expected_draft or hashlib.sha256(run.draft_path.read_bytes()).hexdigest() != expected_draft:
-        return {"run": run.run_id, "ok": False, "error": "ERROR: Final Markdown write blocked by research gate (draft hash stale)."}
-    final_text = re.sub(r"<!--\s*KOS:[^\n]*?-->\n?", "", draft)
-    resolved.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(resolved.parent), suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(final_text)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp, resolved)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    data = run.data()
-    manifest_entry = {
-        "run_id": run.run_id,
-        "output": output_rel,
-        "output_sha256": hashlib.sha256(final_text.encode("utf-8")).hexdigest(),
-        "coverage_plan_sha256": data.get("coverage_plan_sha256"),
-        "facts_sha256": data.get("facts_sha256"),
-        "claims_sha256": data.get("claims_sha256"),
-        "mechanisms_sha256": data.get("mechanisms_sha256"),
-        "finalized_at": utc_now(),
-    }
-    run.save(state="COMMITTED", finalization=manifest_entry)
-    finalizations = read_json(FINALIZATIONS_PATH) or {"entries": []}
-    finalizations["entries"] = [e for e in finalizations.get("entries", []) if e.get("run_id") != run.run_id]
-    finalizations["entries"].append(manifest_entry)
-    write_json_atomic(FINALIZATIONS_PATH, finalizations)
-    write_json_atomic(run.report_path, {"run_id": run.run_id, "result": "COMMITTED", **manifest_entry})
-    if run.data().get("scope") == "solution-space":
-        claims, _ = read_jsonl(run.claims_path)
-        durable = [c for c in claims if c.get("durable") is True]
-        ledger = resolved.parent / "claims.yaml"
-        if durable:
-            claim_digest = hashlib.sha256("\n".join(canonical_line(c) for c in durable).encode()).hexdigest()
-            lines = ["schema_version: 1", f"project: {run.data().get('project')}", f"generated_from_run: {run.run_id}", f"facts_sha256: {data.get('facts_sha256')}", f"claims_source_sha256: {jsonl_sha256(claims)}", f"durable_claims_sha256: {claim_digest}", f"generated_at: {utc_now()}", "claims:"]
-            lines.extend("  - " + json.dumps(c, ensure_ascii=False) for c in durable)
-            ledger.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        elif ledger.is_file():
-            # A newer canonical run with no durable Claims supersedes any older
-            # generated ledger. Keeping the old file would make it fresh-by-date
-            # but semantically stale.
-            ledger.unlink()
-    return {"run": run.run_id, "ok": True, "state": "COMMITTED", "output": manifest_entry["output"]}
+                "error": (f"ERROR: Finalization interrupted after Markdown was written ({detail})." if output_written else f"ERROR: Final Markdown write blocked by research gate ({detail})."),
+                "output_written": output_written, "state": run.state()}
 
 
 # ------------------------------------------------------------------ status / maintain
@@ -1040,6 +1029,8 @@ def research_report() -> dict:
                         issues.append({"kind": "CLAIM_SUPPORT_DRIFT", "run": run.run_id,
                                        "claim": claim.get("claim_id"),
                                        "detail": f"support facts no longer present: {', '.join(sorted(missing))}"})
+    accepted_records, _ = verified_archives(ROOT)
+    accepted_ids = {record["run_id"] for record in accepted_records}
     if FINALIZATIONS_PATH.is_file():
         finalizations = read_json(FINALIZATIONS_PATH) or {}
         entries = finalizations.get("entries", [])
@@ -1050,6 +1041,7 @@ def research_report() -> dict:
             if prior is None or str(entry.get("finalized_at", "")) >= str(prior.get("finalized_at", "")):
                 active[output] = entry
         for entry in entries:
+            if entry.get("run_id") in accepted_ids: continue
             if active.get(entry.get("output")) is not entry:
                 continue  # legitimate historical finalization superseded by a later run
             output = ROOT / entry.get("output", "")
@@ -1061,6 +1053,7 @@ def research_report() -> dict:
                 issues.append({"kind": "UNVERIFIED_GENERATED_UPDATE", "run": entry.get("run_id"),
                                "output": entry.get("output"),
                                "detail": "finalized Markdown changed outside the research gate (FINALIZATION_HASH_DRIFT)"})
+    issues.extend(archive_audit(ROOT)["issues"])
     return {"issues": issues, "issue_count": len(issues)}
 
 
@@ -1069,32 +1062,71 @@ def research_report() -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="knowledgeos research")
     sub = parser.add_subparsers(dest="research_command", required=True)
-    p_init = sub.add_parser("init")
-    p_init.add_argument("run_id")
-    p_init.add_argument("--project", required=True)
-    p_init.add_argument("--scope", required=True)
-    p_status = sub.add_parser("status")
-    p_status.add_argument("run_id")
-    sub.add_parser("verify").add_argument("run_id")
-    p_draft = sub.add_parser("verify-draft")
-    p_draft.add_argument("run_id")
-    p_final = sub.add_parser("finalize")
-    p_final.add_argument("run_id")
-    p_final.add_argument("target")
+    init = sub.add_parser("init"); init.add_argument("run_id"); init.add_argument("--project", required=True); init.add_argument("--scope", required=True)
+    init.add_argument("--target"); init.add_argument("--region")
+    bind = sub.add_parser("bind-target"); bind.add_argument("run_id"); bind.add_argument("target"); bind.add_argument("--region")
+    for name in ("status", "verify", "verify-draft"): sub.add_parser(name).add_argument("run_id")
+    final = sub.add_parser("finalize"); final.add_argument("run_id"); final.add_argument("target")
+    archive = sub.add_parser("archive"); archive.add_argument("run_id"); archive.add_argument("--apply", action="store_true")
+    ledger = sub.add_parser("export-claims"); ledger.add_argument("run_id"); ledger.add_argument("--apply", action="store_true")
+    sub.add_parser("rebuild-provenance")
     args = parser.parse_args(argv)
-    if args.research_command == "init":
-        result = init_run(args.run_id, args.project, args.scope)
-    elif args.research_command == "status":
-        result = status_run(Run(args.run_id)) if Run(args.run_id).exists() else {"ok": False, "errors": ["run not found"]}
-    elif args.research_command == "verify":
-        result = run_verify(args.run_id)
-    elif args.research_command == "verify-draft":
-        result = verify_draft(Run(args.run_id)) if Run(args.run_id).exists() else {"ok": False, "errors": ["run not found"]}
-    else:
-        result = finalize_run(Run(args.run_id), args.target)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    return 0 if result.get("ok", False) else 1
+    try:
+        if hasattr(args, "run_id"): safe_id(args.run_id)
+        if args.research_command == "init": result = init_run(args.run_id, args.project, args.scope, args.target, args.region)
+        elif args.research_command == "rebuild-provenance": result = rebuild_finalizations(ROOT)
+        elif args.research_command == "bind-target":
+            run = Run(args.run_id)
+            if not run.exists(): raise ValueError("run not found")
+            result = {"ok": True, "binding": bind_target(ROOT, run, args.target, args.region)}
+        elif args.research_command == "archive": result = archive_legacy(ROOT, Run(args.run_id), args.apply)
+        elif args.research_command == "export-claims": result = export_claims(Run(args.run_id), args.apply)
+        elif args.research_command == "verify": result = run_verify(args.run_id)
+        elif args.research_command == "finalize": result = finalize_run(Run(args.run_id), args.target)
+        else:
+            run = Run(args.run_id)
+            if not run.exists(): raise ValueError("run not found")
+            result = status_run(run) if args.research_command == "status" else verify_draft(run)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result.get("ok", args.research_command == "status") else 1
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        print(json.dumps({"ok": False, "errors": [str(exc)]}, ensure_ascii=False)); return 1
 
+
+
+def export_claims(run: Run, apply: bool = False) -> dict:
+    records, issues = verified_archives(ROOT)
+    record = next((item for item in records if item["run_id"] == run.run_id), None)
+    if record is None: raise ValueError("export requires an intact accepted evidence bundle")
+    output = target_path(ROOT, record["output"])
+    if output.name != "solution-space.md" or record.get("region"):
+        raise ValueError("only a whole canonical solution-space run may export a ledger")
+    active = [item for item in finalization_entries(ROOT) if item["output"] == record["output"]]
+    if not active or active[-1]["run_id"] != run.run_id: raise ValueError("a newer canonical run supersedes this ledger")
+    if not output.is_file() or digest(output.read_bytes()) != record["output_sha256"]:
+        raise ValueError("canonical output drift; verify changes before exporting")
+    bundle = archive_directory(ROOT, run.run_id)
+    claims, errors = read_jsonl(bundle / "claims.jsonl")
+    if errors: raise ValueError("claims cannot be read")
+    durable = [claim for claim in claims if claim.get("durable") is True]
+    ledger = output.parent / "claims.yaml"
+    previous = ledger.read_bytes() if ledger.is_file() else None
+    if previous is not None and not re.search(rb"(?m)^generated_from_run:\s*\S+", previous):
+        raise ValueError("existing ledger is not identified as generated; manual content is protected")
+    if not apply: return {"ok": True, "dry_run": True, "claims": len(durable), "ledger": str(ledger.relative_to(ROOT))}
+    with target_lock(ROOT, str(output.relative_to(ROOT))):
+        current = ledger.read_bytes() if ledger.is_file() else None
+        if current != previous: raise ValueError("ledger changed while export was planned")
+        if digest(output.read_bytes()) != record["output_sha256"]: raise ValueError("canonical output changed during export")
+        if durable:
+            checksum = digest("\n".join(canonical_line(claim) for claim in durable).encode())
+            lines = ["schema_version: 1", f"generated_from_run: {run.run_id}",
+                     f"durable_claims_sha256: {checksum}", f"claims_source_sha256: {jsonl_sha256(claims)}", "claims:"]
+            lines.extend("  - " + json.dumps(claim, ensure_ascii=False) for claim in durable)
+            atomic_write(ledger, ("\n".join(lines) + "\n").encode())
+        elif previous is not None:
+            ledger.unlink()  # explicitly requested removal of a stale generated projection
+    return {"ok": True, "dry_run": False, "claims": len(durable), "ledger": str(ledger.relative_to(ROOT))}
 
 if __name__ == "__main__":
     raise SystemExit(main())

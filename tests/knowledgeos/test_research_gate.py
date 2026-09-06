@@ -45,7 +45,7 @@ class GateSandbox:
         verification (for fact-level failure tests); otherwise advances through
         FACTS_FROZEN. Claims/mechanisms are written but not verified by build()."""
         run = self.run(run_id)
-        MODULE.init_run(run_id, "Demo", "test")
+        MODULE.init_run(run_id, "Demo", "test", target="vault/projects/Demo/Demo.md")
         sources = [
             {"source_id": "src-r1", "solution_id": "R1", "available": ["writeup", "repository"]},
             {"source_id": "src-r2", "solution_id": "R2", "available": ["writeup"]},
@@ -384,7 +384,7 @@ class ResearchGateSyntheticTest(unittest.TestCase):
         self.gate_open()
         run = self.sandbox.run("t")
         run.draft_path.write_text(
-            "---\ntype: project-doc\n---\n# Demo\n\n<!-- KOS:refs=F-R1-001,C-T-01 -->\nEntropy is 0.01.\n", encoding="utf-8")
+            "---\ntype: project-doc\norigin: codex\n---\n# Demo\n\n<!-- KOS:refs=F-R1-001,C-T-01 -->\nEntropy is 0.01.\n", encoding="utf-8")
         MODULE.verify_draft(run)  # WRITE_ALLOWED -> DRAFT_READY
         self.assertTrue(MODULE.verify_draft(run)["ok"])  # -> FINAL_VERIFIED
         target = self.sandbox.vault / "projects" / "Demo" / "Demo.md"

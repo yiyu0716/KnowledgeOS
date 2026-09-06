@@ -23,3 +23,11 @@ Prefer current durable conclusions when claim lifecycle metadata is available. `
 - Trace to raw Evidence only when the user needs verification or implementation detail.
 
 Search never auto-writes or auto-maintains the Vault. If the current task produces new evidence that could update knowledge, report it as a maintenance candidate; do not modify knowledge unless explicitly asked.
+
+## Parallel units and exact retrieval
+
+Respect both `learning_kind: project` and `learning_kind: mechanism`; do not
+prefer a mechanism card when the question needs the complete project unit. Return
+the matched section, conditions and evidence pointer. Do not treat `projects` or
+`derived_from` as proof of reuse. Declared application records are not controlled
+validation. Never write back from search without explicit user authorization.

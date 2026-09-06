@@ -9,7 +9,7 @@ This document defines the small durable schema. Markdown and primary source file
 - **Solution**: a project-specific case study, normally reconstructed inside `solutions.md`.
 - **Synthesis**: multi-solution comparison and solution-space understanding, normally in `solution-space.md`.
 - **Focused Project Doc**: one project direction such as training, representation, evaluation, or inference.
-- **Learning**: reusable cross-project mechanism/principle under `vault/learning/`.
+- **Learning**: a project-level synthesis (`learning_kind: project`) or reusable problem–mechanism note (`learning_kind: mechanism`) under the existing `vault/learning/`.
 
 `Solution` and `Synthesis` are logical roles; they do not require new frontmatter types.
 
@@ -17,6 +17,8 @@ This document defines the small durable schema. Markdown and primary source file
 
 ```yaml
 type: project | project-doc | learning | paper
+learning_kind: project | mechanism  # optional, only for learning
+aliases: []
 projects:
   - "[[ProjectName]]"
 domains: []
@@ -56,7 +58,7 @@ Project Home      = orientation + navigation + compressed conclusions
 solutions.md      = per-solution Reality canonical source
 solution-space.md = project-wide Mechanism / Principle canonical source
 Focused Docs      = focus-specific Reality + Mechanism canonical source
-Learning          = cross-project reusable Principle canonical source
+Learning          = project learning OR bounded reusable mechanism; one owner per unit
 ```
 
 Canonical ownership prevents semantic duplication, but it never permits under-documentation. A canonical owner must contain enough supported detail to fulfill its role.
@@ -140,7 +142,7 @@ draft.verify.json
 report.json
 ```
 
-All are derived and rebuildable.
+Unaccepted runs are working state, not a substitute for durable proof. On finalization, accepted facts, verdicts, claims, mechanisms, source excerpts, trace, journal and final output are copied into `sources/research/<run-id>/` with checksums. Those accepted bundles are durable and must be backed up; they are not indexes.
 
 ### Coverage Plan
 
@@ -232,4 +234,18 @@ Claim currentness is semantic lifecycle metadata, not file modification time.
 
 ## Rebuildability
 
-Indexes, Research Runs, caches, Graph/Vector/BM25 state, and lint reports belong in `.knowledgeos/`. Deleting `.knowledgeos/` must never delete durable knowledge, Evidence, registry identity, or the tools required to rebuild them.
+Indexes, unaccepted Research Run workspaces, caches, Graph/Vector/BM25 state, and lint reports belong in `.knowledgeos/`. Accepted proof bundles belong in `sources/research/`. Existing legacy committed runs must be archived successfully before their working directories can be removed. Deleting `.knowledgeos/` must never delete durable knowledge, Evidence, registry identity, or the tools required to rebuild them.
+
+## Precise links and parser boundary
+
+The note graph keeps `anchor`, source line and link context. Retrieval retains
+heading paths and occurrence ordinals; repeated headings do not collide in chunk
+IDs. Generated chunk IDs change on heading rename. Use explicit Obsidian block IDs
+for rename-stable references. Frontmatter aliases participate in both links and
+lexical search. Qualified missing paths never fall back to an unrelated basename.
+
+The dependency-free frontmatter parser accepts top-level scalars and flat lists
+(block or inline), not arbitrary nested YAML, tags, merge keys or multiline scalar
+syntax. Unsupported syntax is reported, and write ownership fails closed. Quote
+Wikilinks in Properties. This is a documented subset, not a claim of full YAML or
+full Obsidian Markdown compatibility.

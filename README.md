@@ -1,6 +1,6 @@
 # KnowledgeOS
 
-**Version:** 0.2.1
+**Version:** 0.3.0
 
 > **KnowledgeOS turns real projects into reusable knowledge: from evidence, to mechanisms, to principles, to better decisions on the next problem.**
 >
@@ -30,6 +30,25 @@ The goal is a compounding problem-solving memory: each new project can strengthe
 
 目标是形成不断增强的问题解决记忆：新项目可以补强、修正或反驳已有 Learning，而不是为每个项目创建一套孤立笔记。
 
+## Two Durable Units / 两种并行沉淀单元
+
+KnowledgeOS preserves both units. Neither replaces the other, and a project is
+not required to produce a fixed number of mechanism notes.
+
+| Unit | Responsibility | Storage |
+|---|---|---|
+| Project / 项目单元 | Retain the complete problem, real solution, evaluation, trade-offs and project-level conclusions | Existing Project Home, project docs, and optional `type: learning` + `learning_kind: project` |
+| Problem–mechanism / 问题—机制单元 | Retain a recognizable problem signature, intervention, mechanism, use conditions, counterexamples and transfer checks | `type: learning` + `learning_kind: mechanism` under existing `vault/learning/` |
+
+项目级 Learning 可以独立保留，不必为了全局复用拆散。问题—机制 Learning
+跨项目关联同一份知识，但不复制项目的完整方案事实。两者都支持 `projects`、
+`derived_from`、`source_refs` 和 Wikilinks。缺失 `learning_kind` 的旧笔记保持原样，
+不按项目数量自动猜测类型。先检索已有内容，再选择补强、收窄边界、记录反例或新建。
+
+`projects` 表示相关，`derived_from` 表示来源；它们不等于实际复用。
+在项目的 `Applications` / `应用记录` 章节中说明采用哪条 Learning、如何调整、
+结果和未验证部分。`reuse` 只提取声明过的应用记录，不声称已经证明效果。
+
 ## Knowledge Model / 知识模型
 
 ```text
@@ -48,13 +67,13 @@ Learning
 - **Project** — what the task is, why it is difficult, and how it is evaluated.
 - **Solution** — how one real approach addresses the problem.
 - **Synthesis** — what multiple approaches reveal about the solution space.
-- **Learning** — a reusable mechanism with a problem signature, use conditions, and boundaries.
+- **Learning** — project-level lessons or a reusable problem–mechanism unit, with evidence and boundaries.
 
 - **Evidence**：仓库、commit、论文、writeup、实验和 benchmark。
 - **Project**：任务是什么、难在哪里、如何评估。
 - **Solution**：一个真实方案具体如何解决问题。
 - **Synthesis**：多个方案放在一起后，solution space 呈现什么规律。
-- **Learning**：带有问题签名、适用条件和边界的可复用机制。
+- **Learning**：项目级知识沉淀，或带有问题签名、适用条件和边界的问题—机制沉淀。
 
 ## Two Views, One Knowledge Base / 两种视图，一套知识库
 
@@ -171,7 +190,7 @@ The repository is intentionally dependency-light. Markdown is the durable, human
 
 ## Project Examples / 项目示例
 
-Four complete, evidence-backed project-document snapshots are available under [showcase/](showcase/README.md): OrbitWars, Aicoding-engineering, Agent, and Rogii. They are Human-facing examples only; local Evidence, registry metadata, and Research Runs remain the authoritative verification layer.
+Four complete, evidence-backed project-document snapshots are available under [showcase/](showcase/README.md): OrbitWars, Aicoding-engineering, Agent, and Rogii. They are Human-facing examples only; local Evidence, registry metadata, and accepted research bundles remain the authoritative verification layer.
 
 本项目保持依赖简单。Markdown 是持久且可人工审计的事实表达；`.knowledgeos/` 下的 JSON 只是可重建的派生投影。
 
@@ -239,3 +258,14 @@ Composable.
 ## License
 
 KnowledgeOS is dual-licensed under either the [MIT License](LICENSE-MIT) or the [Apache License 2.0](LICENSE-APACHE), at your option.
+
+## Upgrade to 0.3.0 / 升级
+
+See [UPGRADE_0.3.0.md](UPGRADE_0.3.0.md) for target binding, protected mixed regions,
+accepted research archives, cache rebuilding, and legacy migration. Existing private
+`vault/`, source repositories and Obsidian configuration are not reorganized.
+
+New read-only commands: `graph`, `provenance`, `reuse`, and `eval <suite.json>`.
+Research writes must bind their target before planning. Final accepted evidence
+lives under `sources/research/`; only derived indexes and unaccepted workspace state
+are disposable after migration.
